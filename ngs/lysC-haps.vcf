@@ -1,0 +1,32 @@
+##fileformat=VCFv4.1
+##contig=<ID=1,length=845>
+##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">
+#CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT	lysC_SI01_H1	lysC_SI01_H2	lysC_SI02_H1	lysC_SI02_H2	lysC_SI03_H1	lysC_SI03_H2	lysC_SI04_H1	lysC_SI04_H2
+1	52	.	A	T	.	.	.	GT	0	0	1	0	0	0	0	0
+1	68	.	C	A	.	.	.	GT	0	0	1	0	0	0	0	0
+1	131	.	G	C	.	.	.	GT	0	0	1	0	0	0	0	0
+1	149	.	G	T	.	.	.	GT	0	0	0	1	0	0	0	0
+1	177	.	G	A	.	.	.	GT	0	0	1	0	0	0	0	0
+1	207	.	G	T	.	.	.	GT	0	0	0	1	0	0	0	0
+1	216	.	A	C	.	.	.	GT	0	0	1	0	0	0	0	0
+1	233	.	A	G	.	.	.	GT	0	0	0	1	0	0	0	0
+1	239	.	A	G	.	.	.	GT	0	0	1	0	0	0	1	1
+1	254	.	C	T	.	.	.	GT	0	0	0	0	0	0	1	1
+1	316	.	C	T	.	.	.	GT	0	0	0	0	0	0	1	1
+1	317	.	A	G	.	.	.	GT	0	0	1	0	0	0	0	0
+1	320	.	G	A	.	.	.	GT	0	0	1	0	1	1	0	0
+1	331	.	A	C	.	.	.	GT	0	0	0	0	1	1	0	0
+1	338	.	T	G	.	.	.	GT	0	0	1	0	1	1	0	0
+1	341	.	T	C	.	.	.	GT	0	0	1	0	1	1	0	0
+1	379	.	G	A	.	.	.	GT	0	0	1	0	0	0	0	0
+1	394	.	C	T	.	.	.	GT	0	0	0	1	0	0	0	0
+1	477	.	G	C	.	.	.	GT	0	0	0	1	0	0	0	0
+1	501	.	G	C	.	.	.	GT	0	0	1	0	0	0	0	0
+1	524	.	G	T	.	.	.	GT	0	0	1	0	0	0	0	0
+1	531	.	A	G	.	.	.	GT	0	0	0	1	0	0	0	0
+1	537	.	A	T	.	.	.	GT	0	0	0	1	0	0	0	0
+1	557	.	C	T	.	.	.	GT	0	0	1	1	1	0	1	1
+1	562	.	C	T	.	.	.	GT	0	0	0	0	1	0	0	0
+1	567	.	A	G	.	.	.	GT	0	0	0	1	0	0	0	0
+1	577	.	C	T	.	.	.	GT	0	0	1	0	0	0	0	0
+1	728	.	T	A	.	.	.	GT	0	0	0	0	1	1	0	0
