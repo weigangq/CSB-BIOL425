@@ -10,7 +10,7 @@
 # redirect to a file (second argument)
 
 # Author: Weigang Qiu
-# Date: Jan 30, 2023
+# Date: Feb 4, 2026
 #########################
 
 # input file name as the 1st argument
@@ -29,7 +29,7 @@ cut -d ";" -f 2-6 $1.tmp1 > $1.tmp2
 tr ";" "\t" < $1.tmp2 > $1.tmp3
 
 # sort and redirect to output
-sort -r -n -k 6 $1.tmp3 > $2
+sort -r -n -k 6 $1.tmp3 | column -t > $2
 
 # remove temporary, intermediate files
 rm $1.tmp*
