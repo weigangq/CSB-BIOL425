@@ -238,13 +238,21 @@ plum.long %>%
   group_by(sex) %>% 
   summarise(med = median(score))
 
-# test for significance
-t.test(plum$Male_plumage_score, plum$Female_plumage_score, paired = T)
+# test for significance with a paired t test
+t.test(plum$Male_plumage_score, plum$Female_plumage_score, paired = T) 
 t.test(data = plum, Pair(Male_plumage_score, plum$Female_plumage_score) ~1)
 t.test(data = plum.long, score ~ sex, paired = T)
 
 ```
+Exam distribution of score by sexes:
 
+```{r}
+plum.long |>
+  ggplot(aes(sex, score, color = sex)) +
+  geom_boxplot(outlier.shape = NA) + 
+  geom_jitter(shape = 1, alpha= 0.5) +
+  theme_bw()
+```
 
 ## 9.6 Data Visualization
 
@@ -254,12 +262,13 @@ t.test(data = plum.long, score ~ sex, paired = T)
 # load the library
 #library(tidyverse)
 # read the data
-popsize <- read_tsv("../data_wrangling/data/FauchaldEtAl2017/pop_size.csv")
-ndvi <- read_tsv("../data_wrangling/data/FauchaldEtAl2017/ndvi.csv") 
-seaice <- read_tsv("../data_wrangling/data/FauchaldEtAl2017/sea_ice.csv") 
-snow <- read_tsv("../data_wrangling/data/FauchaldEtAl2017/snow.csv")
-# convert to tidy form
-seaice <- seaice %>% gather(Month, Cover, 3:14)
+popsize <- read_tsv("data_wrangling/data/FauchaldEtAl2017/pop_size.csv")
+ndvi <- read_tsv("data_wrangling/data/FauchaldEtAl2017/ndvi.csv") 
+seaice <- read_tsv("data_wrangling/data/FauchaldEtAl2017/sea_ice.csv") 
+snow <- read_tsv("data_wrangling/data/FauchaldEtAl2017/snow.csv")
+# convert to tidy form (or long table)
+ice.long <- seaice |>
+  pivot_longer(3:14, names_to = "month", values_to = "ice.coverage")
 ```
 
 Let's build our first graph by adding the elements described in the the grammar of graphics, one by one.
@@ -272,7 +281,7 @@ We can associate the x-axis with the Year, the y-axis with Pop_Size, and the col
 
 ```{r}
 ggplot(data = popsize) + 
-  aes(x = Year, y = Pop_Size, colour = Herd)
+  aes(x = Year, y = Pop_Size, colour = Herd) # mapping a char variable into a graphic element
 ```
 
 Notice that we have added the aes using the + sign, which has been repur- posed to collate the various plotting commands. Still we don't have a full graph, because we need to specify a "geometry." For example, let's draw points connected by segments:
@@ -280,7 +289,13 @@ Notice that we have added the aes using the + sign, which has been repur- posed 
 ```{r}
 ggplot(data = popsize) + 
   aes(x = Year, y = Pop_Size, colour = Herd) + 
-  geom_point() + geom_line()
+  geom_point() + 
+  geom_line()
+
+ggplot(data = popsize, aes(x = Year, y = Pop_Size)) + 
+  geom_point() + 
+  geom_line() +
+  facet_wrap(~Herd)
 ```
 
 ### 9.6.3 Plotting Frequency Distribution of One Continuous Variable
@@ -316,7 +331,8 @@ Violin plots add information on the distribution of data (i.e., where a violin p
 ```{r}
 pl <- ggplot(data = ndvi) + aes(x = Herd, y = NDVI_May) 
 pl + geom_boxplot()
-pl + geom_violin()
+pl + geom_violin() +
+  stat_summary() # mean & sd
 
 pl + geom_boxplot() + aes(fill = Herd) # change the color for the boxes, set the aesthetic fill
 
@@ -324,20 +340,25 @@ pl + geom_boxplot() + aes(fill = Herd) # change the color for the boxes, set the
 
 ### 9.6.5 Bar Plots
 
+Visualize distribution of counts of character variables
+
 ```{r}
 ggplot(data = seaice %>% filter(Herd == "WAH")) + 
   aes(x = Year) + 
   geom_bar() # shows that we have 12 records per year for all the years between 1979 and 2014
 
 # When we want the height of the bars to represent a value in a column (instead of a count), we can use geom_col
-ggplot(data = seaice %>% 
+ggplot(data = ice.long %>% 
          filter(Herd == "WAH", Year == 1990)) + 
-  aes(x = Month, y = Cover) + geom_col()
+  aes(x = month, y = ice.coverage) + 
+  geom_col()
 
-seaice$Month <- factor(seaice$Month, month.abb) 
-ggplot(data = seaice %>% 
+ice.long$month <- factor(ice.long$month, month.abb) # re-order by calendar (not alphabetically)
+
+ggplot(data = ice.long %>% 
          filter(Herd == "WAH", Year == 1990)) + 
-  aes(x = Month, y = Cover) + geom_col()
+  aes(x = month, y = ice.coverage) + 
+  geom_col()
 ```
 
 ### 9.6.6 Scatter Plots
@@ -354,7 +375,7 @@ show(pl) # The function show is used to display the plot stored in pl
 pl + geom_smooth()
 
 # add a regression line
-pl + geom_smooth(method = "lm") # use a polynomial regression
+pl + geom_smooth(method = "lm") # use a polynomial regression; "lm": linear model
 pl + geom_smooth(method = "lm", formula = y ~ poly(x, 3), se = FALSE) # By setting se = FALSE, we suppress plotting the standard error
 ```
 
