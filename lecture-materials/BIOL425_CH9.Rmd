@@ -18,7 +18,7 @@ knitr::opts_knit$set(root.dir = "C:/Users/weiga/Dropbox/Courses/CSB-BIOL425/")
 
 ```{r}
 #install.packages("tidyverse") # install tidyverse package
-#library(tidyverse) # load package
+library(tidyverse) # load package
 #tidyverse_update() # update all packages 
 #tidyverse_packages() # list all packages belonging to the package
 ```
@@ -647,23 +647,26 @@ iris %>%
 iris %>% 
   ggplot(aes(x=Species, y = Sepal.Length)) +
   geom_violin() + 
+  stat_summary(color = "red") + # show mean and standard error (SE/sqrt(N))
   geom_jitter(shape = 1)
 
 ```
 ### Stat 1.  t-test: difference of a numerical variable between two categories
+Test normality by QQ plots & QQ line, BEFORE runnin t-tests
+t-test: test the difference of a numerical variable between two groups (ANOVA if more than two groups)
 ```{r}
-# Biological hypothesis: sepal length differs between Setosa and Virginica
+# Step 1. Formulate Biological hypothesis: sepal length differs between Setosa and Virginica
 # Numerical variable: Sepal.Length
 # two categories: Setosa and Virginica
-# Statistical null hypothesis: no difference in means (u1 = u2)
+# Step 2. Transform into Statistical null hypothesis: no difference in means (u1 = u2)
 iris %>% 
   filter(Species != 'versicolor') %>% 
   t.test(data = ., Sepal.Length ~ Species)
 
-# Statistical conclusion: given the data, the two means are the same by chance at a probability of p<2.2e-16. Therefore, the null hypothesis is rejected
-# Biological conclusion: sepal length differ significantly between the two species
+# Step 3. Draw statistical conclusion: given the data, the two means are the same by chance at a probability of p<2.2e-16. Therefore, the null hypothesis is rejected
+# Step 4. Draw biological conclusion: sepal length differ significantly between the two species
   
-# visualization
+# Step 5. Re-visualization
 # with a boxplot & jittered data points
 iris %>% 
   filter(Species != 'versicolor') %>% 
@@ -756,17 +759,16 @@ rownames(x.iris) <- paste("sample", 1:150) # add row names
 # rows are samples
 # columns are variables, 
 # colors are values, scale to normalize among variables (mean =0)
-# dendrograms are based on pairwise correlation coefficients: 
+# dendrograms are based on pairwise correlation coefficients: similarity by correlation coefficient ([-1, 1]); Eucleandian distance is an alternative measure of similarity, because it's scale-dependent
 # row-side cluster: correlated samples are grouped closer to each other
 # column-side cluster: correlated species are grouped closer to each other
 
+#pheatmap(t(x.iris)) 
 pheatmap(x.iris) 
-
 # add annotations
 ann_row <- data.frame(species = factor(iris$Species)) # a data frame containing species for each sample
 rownames(ann_row) <- paste("sample", 1:150)
-pheatmap(x.iris, scale = "column", show_rownames = F, annotation_row = ann_row) # add rowside color to show species
-
+pheatmap(x.iris, scale = "column", show_rownames = F, annotation_row = ann_row) # add rowside color to show species; scale by column: z-scores for each variable; z=(x[i]-mean)/sd(x); should be mostly [-3,3] if normal
 ```
 
 #### Stat 4.2. Dimension reduction by Principal component analysis (PCA)
@@ -774,7 +776,7 @@ pheatmap(x.iris, scale = "column", show_rownames = F, annotation_row = ann_row) 
 # PCA identifies linear combinations of variables that best separate the samples
 pca.iris <- prcomp(x.iris, scale. = T) # run PCA
 plot(pca.iris) # show variance explained by each principal component
-biplot(pca.iris)
+biplot(pca.iris, cex = 0)
 
 # Make a better plot
 pca.coord <- as.data.frame(pca.iris[[5]]) # get coordinates from the PCA output
