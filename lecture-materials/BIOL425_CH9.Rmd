@@ -776,7 +776,15 @@ pheatmap(x.iris, scale = "column", show_rownames = F, annotation_row = ann_row) 
 # PCA identifies linear combinations of variables that best separate the samples
 pca.iris <- prcomp(x.iris, scale. = T) # run PCA
 plot(pca.iris) # show variance explained by each principal component
-biplot(pca.iris, cex = 0)
+biplot(pca.iris, cex = 0) # show loading
+
+# make a better variable loading plot
+library(ggfortify)
+autoplot(pca.iris, 
+         data = iris, 
+         colour = 'Species', 
+         loadings = TRUE, 
+         loadings.label = TRUE)
 
 # Make a better plot
 pca.coord <- as.data.frame(pca.iris[[5]]) # get coordinates from the PCA output
@@ -843,4 +851,251 @@ https://www.kaggle.com/code/khotijahs1/k-means-clustering-of-iris-dataset
 #### Supervised classifer by support vector machines (SVM)
 https://data-flair.training/blogs/iris-flower-classification/
 
+## 10. Case Study: Transcriptome analysis of Borrelia growth
 
+We will replicate results from a study of transcriptome changes during the growth of Lyme disease pathogen (*Borrelia burgdorferi*). 
+
+The key research question is to identify genes up- and down-regulated during early- mid- and late-phases of growth. 
+
+The original paper is available at rom [Arnold et al (2016), PLoS One](https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0164165). 
+
+We will use the Supplemental data set S2 to replicate some of the results.
+
+### Load libraries and pull date from the journal website
+Questions: How many growth phases? How many genes? How many replicons? How many replicates per growth phase?
+
+```{r}
+# load libraries
+library(openxlsx2)
+library(broom)
+
+# run the following two line once
+# install.packages("BiocManager")
+# BiocManager::install("EnhancedVolcano")
+
+# library(EnhancedVolcano)
+
+# read data from web
+bb <- read_xlsx("https://doi.org/10.1371/journal.pone.0164165.s003", start_row = 2, skip_empty_cols = T, skip_empty_rows = T)
+
+# rename column names
+colnames(bb) <- c("replicon", "gene", 
+                  "early1", "early2", "early3",
+                  "mid1", "mid2", "mid3",
+                  "late1", "late2", "late3"
+                  )
+
+# Add locus and annotation columns
+bb <- bb %>% 
+  mutate(locus = str_remove(gene, "BB_") %>% str_remove("_.+")) %>% 
+  mutate(anno = str_remove(gene, "BB_.*\\d+"))
+
+# show data
+glimpse(bb)
+```
+
+### Transform data to be normally distributed
+Note that log2+1 transformation is a technique to
+
+* make data normally distributed
+* avoid zero counts, and
+* set any differences to be **fold changes**: $fc=log_2(\frac{x_1}{x_2})$.
+
+```{r}
+# make a long table:
+bb.long <- bb %>% 
+  pivot_longer(3:11, names_to = "sample", values_to = "rna.counts")
+
+# visualize distribution, check data normality
+bb.long %>% ggplot(aes(sample = rna.counts)) +
+  stat_qq() +
+  stat_qq_line() +
+  facet_wrap(~sample)
+
+# apply log2+1 transformation
+bb.long <- bb.long %>% 
+  mutate(log2.counts = log2(rna.counts+1))
+
+# check normality
+bb.long %>% ggplot(aes(sample = log2.counts)) +
+  stat_qq() +
+  stat_qq_line() +
+  facet_wrap(~sample)
+
+```
+
+
+### Identify genes differentially expressed between early and late growth phases
+We will run t-tests for each gene. This allows us to rank genes by p-values, so we could select the most significant genes that vary between the two phases.
+
+```{r}
+# add a group factor
+bb.long <- bb.long %>% 
+  mutate(growth.phase = str_remove(sample, "\\d$"))
+
+# remove mid-phase
+bb.early.late <- bb.long %>% 
+  filter(growth.phase != 'early')
+
+# t-test by gene, estimate is the fold change!
+t.out <- bb.early.late %>% 
+  group_by(locus) %>% 
+  do(tidy(t.test(data = ., log2.counts ~ growth.phase)))
+
+# show head
+head(t.out)
+```
+
+## We will visualize the t-test results by a volcano plot:
+Explain: 
+
+* fold change & p-value
+* What does each point represent? 
+* Which genes are down-regulated in late phase? 
+* Which genes are up-regulated in late phase?
+```{r fig.height = 10}
+EnhancedVolcano(toptable = t.out, lab = t.out$locus, x = "estimate", y = "p.value",
+                ylim = c(0, 4),
+                pCutoff = 0.05,
+                title = "Differentially expressed genes during Borrelia burgorferi growth",
+                subtitle = "Early vs Late growth",
+                caption = "Data source: Arnold et al (2016). PLoS One. DOI: 10.1371/journal.pone.0164165")
+```
+
+We verify the most significant genes by a boxplot:
+```{r}
+# choose only significant genes:
+sig.genes <- t.out %>% 
+  filter(p.value < 0.01) %>% 
+  pull(locus)
+
+# filter data frame
+bb.sig <- bb.long %>% 
+  filter(locus %in% sig.genes)
+
+# make a boxplot by genes
+bb.sig %>% 
+  ggplot(aes(x = growth.phase, y = log2.counts)) +
+  geom_boxplot() +
+  geom_jitter(color = "red") +
+  facet_wrap(~locus, scales = "free") +
+  theme_bw()
+
+```
+
+We conclude with a heatmap showing the topmost significant differentially expressed genes:
+```{r}
+# choose only significant genes:
+sig.genes <- t.out %>% 
+  filter(p.value < 0.05) %>% 
+  pull(locus)
+
+bb.sig <- bb %>% 
+  filter(locus %in% sig.genes)
+
+# no scaling:
+pheatmap(log2(bb.sig[,3:11]+1), labels_row = bb.sig$locus)
+
+# scale by sample:
+pheatmap(log2(bb.sig[,3:11]+1), scale = "column", labels_row = bb.sig$locus)
+
+# scale by gene:
+pheatmap(log2(bb.sig[,3:11]+1), scale = "row", labels_row = bb.sig$locus)
+
+
+```
+
+```{r fig.height=15}
+# scale by gene (most informative)
+pheatmap(log2(bb.sig[,3:11]+1), scale = "row", labels_row = bb.sig$locus, cellwidth = 30)
+
+```
+
+Questions:
+
+* Do replicates group by phases?
+* Identify a gene that is up-regulated in late phase relative to the early phase
+* Identify a gene that is down-regulated in late phase relative to the early phase
+
+
+## IGRORE BELOW
+### Identify genes differentially expressed between 3 phases
+Need ANOVA, which test the null hypothesis that within-group variance  = between-group variance
+
+
+```{r}
+# add a group factor
+bb.long <- bb.long %>% 
+  mutate(growth.phase = str_remove(sample, "\\d$"))
+
+# batch ANOVA
+anova.out <- bb.long %>% 
+  group_by(locus) %>% 
+  nest() |> # use nested table
+  mutate(model = map(data, ~lm(data = .x, log2.counts ~ growth.phase)),
+         summary = map(model, summary))
+
+# Tidy results
+tidy_results <- anova.out %>% 
+  mutate(tidied = map(model, tidy)) %>% 
+  unnest(tidied)
+
+# A more concise way:
+anova.out2 <- bb.long |>
+  group_by(locus) |>
+  do(tidy(lm(data = ., log2.counts ~ growth.phase)))
+```
+
+
+To get F stats, have to use the "for" loop or "lapply"
+
+```{r}
+f.stats <- function(x) {
+  locus <- x$locus[1]
+  lm.x <- lm(data = x, log2.counts ~ growth.phase)
+  sum.lm <- summary(lm.x)
+  fstat = sum.lm$fstatistic
+  p.value = pf(q = fstat[1], df1 = fstat[2], df2 = fstat[3])
+  return(list(loc = locus, p.value = p.value))
+}
+
+loci <- bb.long |> pull(locus) |> unique()
+
+anova.results <- lapply(loci, function(x){
+  locus.df <- bb.long |> filter(locus == x)
+  f.stats(locus.df)
+})
+
+result.df <- bind_rows(anova.results)
+
+sig.genes <- result.df |> 
+  filter(p.value < 0.05) |>
+  pull(loc)
+
+```
+
+Validate sig genes with boxplots and heatmap
+
+```{r}
+# make a boxplot by genes
+# filter data frame
+bb.sig <- bb.long %>% 
+  filter(locus %in% sig.genes)
+
+bb.sig %>% 
+  ggplot(aes(x = growth.phase, y = log2.counts)) +
+  geom_boxplot() +
+  geom_jitter(color = "red") +
+  facet_wrap(~locus, scales = "free") +
+  theme_bw()
+```
+
+Heatmap
+
+```{r}
+bb.sig <- bb %>% 
+  filter(locus %in% sig.genes)
+# scale by gene:
+pheatmap(log2(bb.sig[,3:11]+1), scale = "row", labels_row = bb.sig$locus)
+
+```
